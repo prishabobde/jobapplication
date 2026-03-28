@@ -4,7 +4,7 @@ import { apiPost } from "../api.js";
 import { useAuth } from "../auth.jsx";
 
 const demoHint =
-  "HR demo: prisha / prisha (or hr / hr). Applicant: applicant / applicant.";
+  "HR: prisha / prisha or hr / hr. Applicant: applicant / applicant, or sohum / sohum (sample resumes on 2 roles).";
 
 export default function Login({ role }) {
   const navigate = useNavigate();

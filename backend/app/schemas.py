@@ -26,3 +26,60 @@ class AuthResponse(BaseModel):
 
 class MeResponse(BaseModel):
     user: UserOut
+
+
+class JobOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    department: str | None
+    location: str | None
+    employment_type: str | None
+    is_open: bool
+    created_at: str
+
+
+class JobsListResponse(BaseModel):
+    jobs: list[JobOut]
+
+
+class JobApplicantOut(BaseModel):
+    application_id: int
+    applicant_id: int
+    username: str
+    original_filename: str
+    applied_at: str
+
+
+class JobApplicantsResponse(BaseModel):
+    applicants: list[JobApplicantOut]
+
+
+class MyApplicationOut(BaseModel):
+    application_id: int
+    original_filename: str
+    applied_at: str
+
+
+class ResumeUploadResponse(BaseModel):
+    application_id: int
+    original_filename: str
+    applied_at: str
+
+
+class ResumeSummaryItem(BaseModel):
+    application_id: int
+    username: str
+    summary: str
+
+
+class TopPickOut(BaseModel):
+    application_id: int
+    username: str
+    reason: str
+
+
+class ResumeSummariesResponse(BaseModel):
+    summaries: list[ResumeSummaryItem]
+    top_pick: TopPickOut | None = None
+    model: str

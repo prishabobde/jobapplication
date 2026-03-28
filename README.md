@@ -24,10 +24,21 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 3001
 | HR        | `prisha`    | `prisha`    |
 | HR        | `hr`        | `hr`        |
 | Applicant | `applicant` | `applicant` |
+| Applicant | `sohum`     | `sohum`     |
+
+The `sohum` account is seeded with older sample applications on the first two jobs (so “top 5” lists are dominated by fresher demo candidates). Additional demo applicants (`taylor`, `sam`, `riley`, `jordan`, `morgan`, `alex`, `casey` on Software Dev; `priya`, `dev` on Product Manager) are added when missing—password equals username for each. Delete `portal.sqlite` to re-run all seeds.
+
+**HR + OpenAI:** Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`, default `gpt-5-nano`; use `gpt-4o-mini` if your key does not have access to that model) in `backend/.env`. HR can use **Summarize & recommend top match** on a job, which calls `POST /api/jobs/{id}/summarize-resumes` and sends the job title/description plus extracted text from the five most recent resumes to OpenAI. The response includes per-applicant summaries and a **top pick** with a short justification tied to the role. Jobs with no applicants return empty summaries without calling the API.
+
+**Keeping API keys safe:** The key stays on the server only (read from env / `.env`). It is not exposed to the browser, not included in API JSON responses, and summarization errors return a generic message to clients while details go to server logs. `.env` is gitignored—use `.env.example` as a template. If a key is ever committed or leaked, revoke it in the [OpenAI API keys](https://platform.openai.com/api-keys) dashboard and create a new one.
 
 **Signup:** `POST /api/auth/register` with `username`, `password`, and `role: "applicant"`. There is no email field and no verification step—any non-empty username and password are accepted after trimming the username.
 
 **Login:** `POST /api/auth/login` with `username`, `password`, and `role` (`hr` or `applicant`).
+
+**Jobs (authenticated):** `GET /api/jobs` lists open roles with full descriptions; `GET /api/jobs/{id}` returns one role. Five seed jobs are inserted when the `jobs` table is empty (Software Dev, Product Manager, ML Engineer, HR, Financial Analyst).
+
+**Applications:** Applicants `POST /api/jobs/{id}/resume` (multipart `file`, types `.pdf`/`.doc`/`.docx`/`.txt`, max 5MB). `GET /api/jobs/{id}/my-application` returns the current user’s submission. HR `GET /api/jobs/{id}/applicants` returns up to five most recent applicants per role. `GET /api/applications/{id}/resume` downloads the file (HR or the owning applicant). Resume files live under `data/resumes/` next to the SQLite file.
 
 Set `FRONTEND_ORIGIN` in `.env` to match your frontend dev server (default `http://localhost:5173`).
 

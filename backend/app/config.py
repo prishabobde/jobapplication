@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,11 @@ class Settings(BaseSettings):
     port: int = 3001
     jwt_secret: str = ""
     frontend_origin: str = "http://localhost:5173"
+    # Never log or JSON-serialize this field; use .get_secret_value() only when calling OpenAI.
+    openai_api_key: SecretStr = SecretStr("")
+    # Default to lowest-cost chat model; override if your account returns "model not found"
+    # (e.g. OPENAI_MODEL=gpt-4o-mini).
+    openai_model: str = "gpt-5-nano"
 
 
 settings = Settings()

@@ -27,10 +27,59 @@ export async function apiPost(path, body, token) {
   return res.json();
 }
 
+/** POST with no JSON body (e.g. trigger actions). */
+export async function apiPostTrigger(path, token) {
+  const res = await fetch(`${base}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
 export async function apiGet(path, token) {
   const res = await fetch(`${base}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
+}
+
+/** GET that returns null on 404 instead of throwing (for optional resources). */
+export async function apiGetMaybe(path, token) {
+  const res = await fetch(`${base}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function apiUploadResume(jobId, file, token) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${base}/api/jobs/${jobId}/resume`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+export async function apiDownloadResume(applicationId, token, downloadName) {
+  const res = await fetch(`${base}/api/applications/${applicationId}/resume`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = downloadName || "resume";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
