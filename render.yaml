@@ -1,0 +1,12 @@
+# Blueprint: deploy the API only. Build/start assume repo root (requirements.txt at root
+# includes backend deps). Set env vars in the Render dashboard (JWT_SECRET, FRONTEND_ORIGIN,
+# OPENAI_API_KEY, etc.). Deploy the Vite frontend separately as a Static Site with VITE_API_URL.
+services:
+  - type: web
+    name: prisha-portal-api
+    plan: free
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    # Free tier: 1 worker avoids OOM; $PORT is set by Render; cwd must be backend for app.main
+    startCommand: cd backend && gunicorn app.main:app --workers 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health

@@ -1,0 +1,2 @@
+# Render (and other tools) often run builds from the repo root. Delegate to backend deps.
+-r backend/requirements.txt
