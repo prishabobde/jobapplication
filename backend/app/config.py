@@ -7,7 +7,13 @@ class Settings(BaseSettings):
 
     port: int = 3001
     jwt_secret: str = ""
+    # Comma-separated allowed browser origins (no trailing slash). Production + local dev example:
+    # https://my-app.onrender.com,http://localhost:5173
     frontend_origin: str = "http://localhost:5173"
+
+    def cors_allow_origins(self) -> list[str]:
+        parts = [p.strip().rstrip("/") for p in self.frontend_origin.split(",") if p.strip()]
+        return parts if parts else ["http://localhost:5173"]
     # Never log or JSON-serialize this field; use .get_secret_value() only when calling OpenAI.
     openai_api_key: SecretStr = SecretStr("")
     # Default to lowest-cost chat model; override if your account returns "model not found"

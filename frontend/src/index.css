@@ -83,6 +83,55 @@ input {
   padding: 2.5rem 1.5rem 4rem;
 }
 
+/* Home hero — abstract blue graphic, matches --accent in light/dark */
+.hero-graphic-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 0.5rem;
+  max-width: 440px;
+}
+
+.hero-graphic {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  display: block;
+}
+
+.hero-graphic__base {
+  fill: var(--accent-soft);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.hero-graphic__bar {
+  fill: var(--accent);
+  opacity: 0.2;
+}
+
+.hero-graphic__bar--mid {
+  opacity: 0.3;
+}
+
+.hero-graphic__bar--tall {
+  opacity: 0.42;
+}
+
+.hero-graphic__line {
+  stroke: var(--accent);
+  opacity: 0.32;
+}
+
+.hero-graphic__hub {
+  fill: var(--accent);
+  opacity: 0.88;
+}
+
+.hero-graphic__hub-ring {
+  stroke: var(--accent);
+  opacity: 0.22;
+}
+
 .brand {
   text-align: center;
   margin-bottom: 3rem;

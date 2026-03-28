@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import HeroGraphic from "../components/HeroGraphic.jsx";
 import { useAuth } from "../auth.jsx";
 
 export default function Home() {
@@ -6,6 +7,7 @@ export default function Home() {
 
   return (
     <div className="layout">
+      <HeroGraphic />
       <header className="brand">
         <div className="brand-badge">Careers &amp; talent</div>
         <h1 className="brand-title">Prisha Company</h1>

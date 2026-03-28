@@ -1,6 +1,11 @@
-# Blueprint: deploy the API only. Build/start assume repo root (requirements.txt at root
-# includes backend deps). Set env vars in the Render dashboard (JWT_SECRET, FRONTEND_ORIGIN,
-# OPENAI_API_KEY, etc.). Deploy the Vite frontend separately as a Static Site with VITE_API_URL.
+# Blueprint: API (Python) + SPA (Vite static).
+#
+# After deploy:
+# 1) Note the static site URL (e.g. https://prisha-portal-web.onrender.com).
+# 2) On the API service, set FRONTEND_ORIGIN to that exact URL (no trailing slash).
+# 3) For VITE_API_URL, use your API URL (e.g. https://prisha-portal-api.onrender.com) — no trailing slash.
+#
+# Dashboard env vars (API): JWT_SECRET, FRONTEND_ORIGIN, OPENAI_API_KEY (optional), etc.
 services:
   - type: web
     name: prisha-portal-api
@@ -10,3 +15,20 @@ services:
     # Free tier: 1 worker avoids OOM; $PORT is set by Render; cwd must be backend for app.main
     startCommand: cd backend && gunicorn app.main:app --workers 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     healthCheckPath: /api/health
+
+  - type: web
+    name: prisha-portal-web
+    plan: free
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    # Client-side routing (React Router)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Full URL of the API (same value you open in the browser for /docs). Set in dashboard if not prompted.
+      - key: VITE_API_URL
+        sync: false
