@@ -53,3 +53,22 @@ pytest
 ```
 
 Each test uses a temporary database via `PORTAL_DB_PATH`; no email or external services are required.
+
+## GitHub
+
+This folder is its **own** git repository (separate from a parent `git` repo if one exists higher on disk).
+
+After [installing the GitHub CLI](https://cli.github.com/) (`brew install gh`), sign in and create the remote in one step from the project root:
+
+```bash
+cd /Users/pbobde/personal/jobapplication
+gh auth login
+gh repo create jobapplication --public --source=. --remote=origin --push
+```
+
+Use any repo name you like instead of `jobapplication`. If the repository already exists on GitHub, add it and push:
+
+```bash
+git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+git push -u origin main
+```
