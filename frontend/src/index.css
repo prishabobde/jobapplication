@@ -298,6 +298,17 @@ input {
   background: var(--accent-hover);
 }
 
+.btn-secondary {
+  background: var(--bg-subtle);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:not(:disabled):hover {
+  background: var(--border);
+  border-color: var(--border-strong);
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--muted);
@@ -606,6 +617,38 @@ input {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   color: var(--danger);
+}
+
+.job-side-success {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: #2e7d32;
+}
+
+[data-theme="dark"] .job-side-success {
+  color: #81c784;
+}
+
+.hr-add-applicant {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hr-add-applicant-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 22rem;
+}
+
+.hr-add-applicant-form .field {
+  margin-bottom: 0.35rem;
+}
+
+.hr-add-applicant-submit {
+  margin-top: 0.5rem;
+  align-self: flex-start;
 }
 
 .applicant-list {

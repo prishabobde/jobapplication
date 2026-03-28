@@ -67,6 +67,21 @@ export async function apiUploadResume(jobId, file, token) {
   return res.json();
 }
 
+/** HR: create applicant by username if new, or replace resume for this job if they already exist. */
+export async function apiHrSubmitApplicantResume(jobId, username, password, file, token) {
+  const fd = new FormData();
+  fd.append("username", username.trim());
+  if (password && password.trim()) fd.append("password", password.trim());
+  fd.append("file", file);
+  const res = await fetch(`${base}/api/jobs/${jobId}/hr-applicant-resume`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
 export async function apiDownloadResume(applicationId, token, downloadName) {
   const res = await fetch(`${base}/api/applications/${applicationId}/resume`, {
     headers: { Authorization: `Bearer ${token}` },

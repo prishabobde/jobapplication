@@ -5,7 +5,7 @@ import sqlite3
 import uuid
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -15,6 +15,7 @@ from .database import get_conn, get_resumes_dir, hash_password, init_db, verify_
 from .resume_extract import extract_resume_text
 from .schemas import (
     AuthResponse,
+    HrApplicantResumeResponse,
     JobApplicantOut,
     JobApplicantsResponse,
     JobOut,
@@ -215,6 +216,68 @@ def _assert_open_job(conn: sqlite3.Connection, job_id: int) -> None:
         raise HTTPException(status_code=404, detail="Job not found")
 
 
+def _upsert_job_application_resume(
+    conn: sqlite3.Connection,
+    resume_dir: Path,
+    job_id: int,
+    applicant_id: int,
+    content: bytes,
+    orig_name: str,
+) -> tuple[int, str, str]:
+    """Insert or update the application row for this job + applicant; write new file, remove old file."""
+    if len(content) > RESUME_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    suffix = Path(orig_name).suffix.lower()
+    if suffix not in RESUME_SUFFIXES:
+        raise HTTPException(
+            status_code=400,
+            detail="Allowed file types: .pdf, .doc, .docx, .txt",
+        )
+    stored = f"{uuid.uuid4().hex}{suffix}"
+    dest = resume_dir / stored
+    if dest.exists():
+        raise HTTPException(status_code=500, detail="Storage conflict; retry")
+
+    display_name = SAFE_FILENAME_RE.sub("_", orig_name).strip() or f"resume{suffix}"
+
+    old = conn.execute(
+        "SELECT id, stored_filename FROM applications WHERE job_id = ? AND applicant_id = ?",
+        (job_id, applicant_id),
+    ).fetchone()
+    if old:
+        old_path = resume_dir / old["stored_filename"]
+        if old_path.is_file():
+            old_path.unlink()
+
+    dest.write_bytes(content)
+
+    if old:
+        conn.execute(
+            """
+            UPDATE applications
+            SET stored_filename = ?, original_filename = ?, created_at = datetime('now')
+            WHERE id = ?
+            """,
+            (stored, display_name, old["id"]),
+        )
+        app_id = int(old["id"])
+    else:
+        cur = conn.execute(
+            """
+            INSERT INTO applications (job_id, applicant_id, stored_filename, original_filename)
+            VALUES (?, ?, ?, ?)
+            """,
+            (job_id, applicant_id, stored, display_name),
+        )
+        app_id = int(cur.lastrowid)
+
+    row = conn.execute(
+        "SELECT created_at FROM applications WHERE id = ?",
+        (app_id,),
+    ).fetchone()
+    return app_id, display_name, str(row["created_at"])
+
+
 @app.get("/api/jobs/{job_id}/applicants", response_model=JobApplicantsResponse)
 def list_job_applicants(
     job_id: int,
@@ -377,66 +440,77 @@ async def upload_resume(
 ):
     applicant_id = int(payload["sub"])
     content = await file.read()
-    if len(content) > RESUME_MAX_BYTES:
-        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
     orig_name = file.filename or "resume"
-    suffix = Path(orig_name).suffix.lower()
-    if suffix not in RESUME_SUFFIXES:
-        raise HTTPException(
-            status_code=400,
-            detail="Allowed file types: .pdf, .doc, .docx, .txt",
-        )
-    stored = f"{uuid.uuid4().hex}{suffix}"
     resume_dir = get_resumes_dir()
-    dest = resume_dir / stored
-    if dest.exists():
-        raise HTTPException(status_code=500, detail="Storage conflict; retry")
-
-    display_name = SAFE_FILENAME_RE.sub("_", orig_name).strip() or f"resume{suffix}"
-
     with get_conn() as conn:
         _assert_open_job(conn, job_id)
-        old = conn.execute(
-            "SELECT id, stored_filename FROM applications WHERE job_id = ? AND applicant_id = ?",
-            (job_id, applicant_id),
-        ).fetchone()
-        if old:
-            old_path = resume_dir / old["stored_filename"]
-            if old_path.is_file():
-                old_path.unlink()
-
-        dest.write_bytes(content)
-
-        if old:
-            conn.execute(
-                """
-                UPDATE applications
-                SET stored_filename = ?, original_filename = ?, created_at = datetime('now')
-                WHERE id = ?
-                """,
-                (stored, display_name, old["id"]),
-            )
-            app_id = int(old["id"])
-        else:
-            cur = conn.execute(
-                """
-                INSERT INTO applications (job_id, applicant_id, stored_filename, original_filename)
-                VALUES (?, ?, ?, ?)
-                """,
-                (job_id, applicant_id, stored, display_name),
-            )
-            app_id = int(cur.lastrowid)
+        app_id, display_name, applied_at = _upsert_job_application_resume(
+            conn, resume_dir, job_id, applicant_id, content, orig_name
+        )
         conn.commit()
-
-        row = conn.execute(
-            "SELECT created_at FROM applications WHERE id = ?",
-            (app_id,),
-        ).fetchone()
 
     return ResumeUploadResponse(
         application_id=app_id,
         original_filename=display_name,
-        applied_at=row["created_at"],
+        applied_at=applied_at,
+    )
+
+
+@app.post("/api/jobs/{job_id}/hr-applicant-resume", response_model=HrApplicantResumeResponse)
+async def hr_submit_applicant_resume(
+    job_id: int,
+    _hr: dict = Depends(require_hr),
+    username: str = Form(),
+    file: UploadFile = File(...),
+    password: str | None = Form(default=None),
+):
+    """
+    HR: create applicant user if username is new, then attach/replace resume for this job.
+    If the applicant already exists, only the resume for this role is replaced (password unchanged).
+    Optional password (defaults to username) is used only when creating the user.
+    """
+    uname = username.strip()
+    if not uname:
+        raise HTTPException(status_code=400, detail="username is required")
+    content = await file.read()
+    orig_name = file.filename or "resume"
+    resume_dir = get_resumes_dir()
+
+    with get_conn() as conn:
+        _assert_open_job(conn, job_id)
+        row = conn.execute(
+            "SELECT id, role FROM users WHERE username = ?",
+            (uname,),
+        ).fetchone()
+        created_new = False
+        if row:
+            if row["role"] != "applicant":
+                raise HTTPException(
+                    status_code=400,
+                    detail="That username is already used for a non-applicant account.",
+                )
+            applicant_id = int(row["id"])
+        else:
+            raw_pw = password.strip() if password and password.strip() else uname
+            cur = conn.execute(
+                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                (uname, hash_password(raw_pw), "applicant"),
+            )
+            applicant_id = int(cur.lastrowid)
+            created_new = True
+
+        app_id, display_name, applied_at = _upsert_job_application_resume(
+            conn, resume_dir, job_id, applicant_id, content, orig_name
+        )
+        conn.commit()
+
+    return HrApplicantResumeResponse(
+        application_id=app_id,
+        applicant_id=applicant_id,
+        username=uname,
+        original_filename=display_name,
+        applied_at=applied_at,
+        created_new_user=created_new,
     )
 
 

@@ -67,6 +67,15 @@ class ResumeUploadResponse(BaseModel):
     applied_at: str
 
 
+class HrApplicantResumeResponse(BaseModel):
+    application_id: int
+    applicant_id: int
+    username: str
+    original_filename: str
+    applied_at: str
+    created_new_user: bool
+
+
 class ResumeSummaryItem(BaseModel):
     application_id: int
     username: str

@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiDownloadResume, apiGet, apiGetMaybe, apiPostTrigger, apiUploadResume } from "../api.js";
+import {
+  apiDownloadResume,
+  apiGet,
+  apiGetMaybe,
+  apiHrSubmitApplicantResume,
+  apiPostTrigger,
+  apiUploadResume,
+} from "../api.js";
 
 export default function JobBoard({ jobs, role, token }) {
   const [selectedId, setSelectedId] = useState(jobs[0]?.id ?? null);
@@ -33,11 +40,20 @@ export default function JobBoard({ jobs, role, token }) {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
 
+  const [hrApplicantUser, setHrApplicantUser] = useState("");
+  const [hrApplicantPass, setHrApplicantPass] = useState("");
+  const [hrApplicantUploading, setHrApplicantUploading] = useState(false);
+  const [hrApplicantError, setHrApplicantError] = useState("");
+  const [hrApplicantOk, setHrApplicantOk] = useState("");
+  const [applicantsRefresh, setApplicantsRefresh] = useState(0);
+
   useEffect(() => {
     setSummaries([]);
     setTopPick(null);
     setSummaryModel("");
     setSummaryError("");
+    setHrApplicantOk("");
+    setHrApplicantError("");
   }, [selectedId]);
 
   useEffect(() => {
@@ -65,7 +81,7 @@ export default function JobBoard({ jobs, role, token }) {
     return () => {
       cancelled = true;
     };
-  }, [token, selectedId, role]);
+  }, [token, selectedId, role, applicantsRefresh]);
 
   useEffect(() => {
     if (!token || !selectedId || role !== "applicant") {
@@ -113,6 +129,47 @@ export default function JobBoard({ jobs, role, token }) {
     apiDownloadResume(applicationId, token, filename).catch((err) => {
       alert(err.message || "Download failed");
     });
+  }
+
+  async function onHrApplicantSubmit(e) {
+    e.preventDefault();
+    if (!selectedId || !token) return;
+    const fd = new FormData(e.target);
+    const file = fd.get("hr_resume_file");
+    if (!file || !(file instanceof File) || file.size === 0) {
+      setHrApplicantError("Choose a resume file.");
+      return;
+    }
+    const u = hrApplicantUser.trim();
+    if (!u) {
+      setHrApplicantError("Enter applicant username.");
+      return;
+    }
+    setHrApplicantError("");
+    setHrApplicantOk("");
+    setHrApplicantUploading(true);
+    try {
+      const data = await apiHrSubmitApplicantResume(
+        selectedId,
+        u,
+        hrApplicantPass,
+        file,
+        token
+      );
+      setHrApplicantOk(
+        data.created_new_user
+          ? `Created applicant “${data.username}” and saved resume.`
+          : `Updated resume for “${data.username}” on this role.`
+      );
+      e.target.reset();
+      setHrApplicantUser("");
+      setHrApplicantPass("");
+      setApplicantsRefresh((n) => n + 1);
+    } catch (err) {
+      setHrApplicantError(err.message || "Could not save applicant");
+    } finally {
+      setHrApplicantUploading(false);
+    }
   }
 
   async function onSummarizeResumes() {
@@ -196,6 +253,61 @@ export default function JobBoard({ jobs, role, token }) {
 
               {isHr ? (
                 <div className="job-side-section">
+                  <div className="hr-add-applicant">
+                    <h4 className="job-side-title">Add applicant for this role</h4>
+                    <p className="job-side-muted job-side-muted--tight">
+                      New username creates an applicant account (password defaults to username unless you set one).
+                      Existing applicant: only the resume for <strong>this</strong> job is replaced.
+                    </p>
+                    <form className="hr-add-applicant-form" onSubmit={onHrApplicantSubmit}>
+                      <div className="field">
+                        <label htmlFor="hr-applicant-user">Applicant username</label>
+                        <input
+                          id="hr-applicant-user"
+                          autoComplete="off"
+                          value={hrApplicantUser}
+                          onChange={(e) => setHrApplicantUser(e.target.value)}
+                          placeholder="e.g. jordan"
+                          disabled={hrApplicantUploading}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="hr-applicant-pass">Password (new users only)</label>
+                        <input
+                          id="hr-applicant-pass"
+                          type="password"
+                          autoComplete="new-password"
+                          value={hrApplicantPass}
+                          onChange={(e) => setHrApplicantPass(e.target.value)}
+                          placeholder="Optional — defaults to username"
+                          disabled={hrApplicantUploading}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="hr-resume-file">Resume file</label>
+                        <input
+                          id="hr-resume-file"
+                          name="hr_resume_file"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.txt,application/pdf"
+                          required
+                          disabled={hrApplicantUploading}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="btn btn-secondary hr-add-applicant-submit"
+                        disabled={hrApplicantUploading}
+                      >
+                        {hrApplicantUploading ? "Saving…" : "Save applicant & resume"}
+                      </button>
+                    </form>
+                    {hrApplicantError ? (
+                      <p className="job-side-error">{hrApplicantError}</p>
+                    ) : null}
+                    {hrApplicantOk ? <p className="job-side-success">{hrApplicantOk}</p> : null}
+                  </div>
+
                   <h4 className="job-side-title">Top applicants (up to 5)</h4>
                   {applicantsLoading ? (
                     <p className="job-side-muted">Loading applicants…</p>
