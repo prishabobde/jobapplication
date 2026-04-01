@@ -46,6 +46,8 @@ export default function JobBoard({ jobs, role, token }) {
   const [hrApplicantError, setHrApplicantError] = useState("");
   const [hrApplicantOk, setHrApplicantOk] = useState("");
   const [applicantsRefresh, setApplicantsRefresh] = useState(0);
+  const [hrAddApplicantOpen, setHrAddApplicantOpen] = useState(false);
+  const [hrApplicantFormKey, setHrApplicantFormKey] = useState(0);
 
   useEffect(() => {
     setSummaries([]);
@@ -54,7 +56,19 @@ export default function JobBoard({ jobs, role, token }) {
     setSummaryError("");
     setHrApplicantOk("");
     setHrApplicantError("");
+    setHrAddApplicantOpen(false);
+    setHrApplicantUser("");
+    setHrApplicantPass("");
+    setHrApplicantFormKey((k) => k + 1);
   }, [selectedId]);
+
+  function onCancelHrAddApplicant() {
+    setHrAddApplicantOpen(false);
+    setHrApplicantUser("");
+    setHrApplicantPass("");
+    setHrApplicantError("");
+    setHrApplicantFormKey((k) => k + 1);
+  }
 
   useEffect(() => {
     if (!token || !selectedId || role !== "hr") {
@@ -165,6 +179,8 @@ export default function JobBoard({ jobs, role, token }) {
       setHrApplicantUser("");
       setHrApplicantPass("");
       setApplicantsRefresh((n) => n + 1);
+      setHrAddApplicantOpen(false);
+      setHrApplicantFormKey((k) => k + 1);
     } catch (err) {
       setHrApplicantError(err.message || "Could not save applicant");
     } finally {
@@ -255,53 +271,82 @@ export default function JobBoard({ jobs, role, token }) {
                 <div className="job-side-section">
                   <div className="hr-add-applicant">
                     <h4 className="job-side-title">Add applicant for this role</h4>
-                    <p className="job-side-muted job-side-muted--tight">
-                      New username creates an applicant account (password defaults to username unless you set one).
-                      Existing applicant: only the resume for <strong>this</strong> job is replaced.
-                    </p>
-                    <form className="hr-add-applicant-form" onSubmit={onHrApplicantSubmit}>
-                      <div className="field">
-                        <label htmlFor="hr-applicant-user">Applicant username</label>
-                        <input
-                          id="hr-applicant-user"
-                          autoComplete="off"
-                          value={hrApplicantUser}
-                          onChange={(e) => setHrApplicantUser(e.target.value)}
-                          placeholder="e.g. jordan"
-                          disabled={hrApplicantUploading}
-                        />
-                      </div>
-                      <div className="field">
-                        <label htmlFor="hr-applicant-pass">Password (new users only)</label>
-                        <input
-                          id="hr-applicant-pass"
-                          type="password"
-                          autoComplete="new-password"
-                          value={hrApplicantPass}
-                          onChange={(e) => setHrApplicantPass(e.target.value)}
-                          placeholder="Optional — defaults to username"
-                          disabled={hrApplicantUploading}
-                        />
-                      </div>
-                      <div className="field">
-                        <label htmlFor="hr-resume-file">Resume file</label>
-                        <input
-                          id="hr-resume-file"
-                          name="hr_resume_file"
-                          type="file"
-                          accept=".pdf,.doc,.docx,.txt,application/pdf"
-                          required
-                          disabled={hrApplicantUploading}
-                        />
-                      </div>
+                    {!hrAddApplicantOpen ? (
                       <button
-                        type="submit"
-                        className="btn btn-secondary hr-add-applicant-submit"
-                        disabled={hrApplicantUploading}
+                        type="button"
+                        className="btn btn-secondary hr-add-applicant-toggle"
+                        onClick={() => {
+                          setHrAddApplicantOpen(true);
+                          setHrApplicantError("");
+                        }}
                       >
-                        {hrApplicantUploading ? "Saving…" : "Save applicant & resume"}
+                        Add applicant
                       </button>
-                    </form>
+                    ) : (
+                      <>
+                        <p className="job-side-muted job-side-muted--tight">
+                          New username creates an applicant account (password defaults to username unless you set one).
+                          Existing applicant: only the resume for <strong>this</strong> job is replaced.
+                        </p>
+                        <form
+                          key={hrApplicantFormKey}
+                          className="hr-add-applicant-form"
+                          onSubmit={onHrApplicantSubmit}
+                        >
+                          <div className="field">
+                            <label htmlFor="hr-applicant-user">Applicant username</label>
+                            <input
+                              id="hr-applicant-user"
+                              autoComplete="off"
+                              value={hrApplicantUser}
+                              onChange={(e) => setHrApplicantUser(e.target.value)}
+                              placeholder="e.g. jordan"
+                              disabled={hrApplicantUploading}
+                            />
+                          </div>
+                          <div className="field">
+                            <label htmlFor="hr-applicant-pass">Password (new users only)</label>
+                            <input
+                              id="hr-applicant-pass"
+                              type="password"
+                              autoComplete="new-password"
+                              value={hrApplicantPass}
+                              onChange={(e) => setHrApplicantPass(e.target.value)}
+                              placeholder="Optional — defaults to username"
+                              disabled={hrApplicantUploading}
+                            />
+                          </div>
+                          <div className="field">
+                            <label htmlFor="hr-resume-file">Resume file</label>
+                            <input
+                              id="hr-resume-file"
+                              name="hr_resume_file"
+                              type="file"
+                              accept=".pdf,.doc,.docx,.txt,application/pdf"
+                              required
+                              disabled={hrApplicantUploading}
+                            />
+                          </div>
+                          <div className="hr-add-applicant-actions">
+                            <button
+                              type="submit"
+                              className="btn btn-secondary hr-add-applicant-submit"
+                              disabled={hrApplicantUploading}
+                            >
+                              {hrApplicantUploading ? "Saving…" : "Save applicant & resume"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost hr-add-applicant-cancel"
+                              disabled={hrApplicantUploading}
+                              onClick={onCancelHrAddApplicant}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </>
+                    )}
                     {hrApplicantError ? (
                       <p className="job-side-error">{hrApplicantError}</p>
                     ) : null}

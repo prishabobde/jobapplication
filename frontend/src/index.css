@@ -635,6 +635,10 @@ input {
   border-bottom: 1px solid var(--border);
 }
 
+.hr-add-applicant-toggle {
+  margin-top: 0.25rem;
+}
+
 .hr-add-applicant-form {
   display: flex;
   flex-direction: column;
@@ -646,9 +650,22 @@ input {
   margin-bottom: 0.35rem;
 }
 
-.hr-add-applicant-submit {
+.hr-add-applicant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
   margin-top: 0.5rem;
-  align-self: flex-start;
+}
+
+.hr-add-applicant-submit {
+  align-self: auto;
+}
+
+.hr-add-applicant-cancel {
+  margin-top: 0;
+  padding: 0.5rem 0.75rem;
+  width: auto;
 }
 
 .applicant-list {
