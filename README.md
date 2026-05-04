@@ -76,10 +76,3 @@ cd /Users/pbobde/personal/jobapplication
 gh auth login
 gh repo create jobapplication --public --source=. --remote=origin --push
 ```
-
-Use any repo name you like instead of `jobapplication`. If the repository already exists on GitHub, add it and push:
-
-```bash
-git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
-git push -u origin main
-```
